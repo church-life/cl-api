@@ -1,0 +1,251 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgres"
+  url      = env("DATABASE_URL")
+}
+
+model Country {
+  id String @id @default(cuid())
+
+  name     String
+  code     String
+  campuses Campus[]
+
+  @@map("countries")
+}
+
+model Campus {
+  id String @id @default(cuid())
+
+  name     String // Surco|Lince
+  district String
+  city     String
+  address  String
+  // more fields
+
+  country   Country @relation(fields: [countryId], references: [id])
+  countryId String  @map("country_id")
+
+  users        User[]
+  serviceTeams ServiceTeam[]
+  groups       Group[]
+
+  @@map("campuses")
+}
+
+enum DocumentType {
+  DNI
+  PASSPORT
+  OTHER
+
+  @@map("document_type")
+}
+
+model User {
+  id String @id @default(cuid())
+
+  displayName  String // Jhon
+  names        String // Jhonatan David
+  lastNames    String // Macazana Huaringa
+  email        String       @unique
+  phone        String
+  documentType DocumentType @map("document_type")
+  documentId   String       @unique @map("document_id")
+  birthDate    DateTime     @map("birth_date") @db.Date
+  // redes sociales
+
+  preferredCampus   Campus? @relation(fields: [preferredCampusId], references: [id])
+  preferredCampusId String? @map("preferred_campus_id")
+
+  groups       UserToSmallGroup[]
+  ministries   UserToMinistry[]
+  serviceTeams UserToServiceTeam[]
+  // UserToSmallGroup UserToSmallGroup[]
+
+  @@map("users")
+}
+
+enum UserRegisterStatus {
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@map("user_register_status")
+}
+
+model UserToSmallGroup {
+  user    User   @relation(fields: [userId], references: [id])
+  userId  String @map("user_id")
+  group   Group  @relation(fields: [groupId], references: [id])
+  groupId String @map("group_id")
+
+  status    UserRegisterStatus @default(PENDING)
+  createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  // updatedById String?
+  // updatedBy   User?          @relation("UserToSmallGroupUpdatedBy", fields: [updatedById], references: [id])
+
+  @@id([userId, groupId])
+  @@map("users_to_small_groups")
+}
+
+enum GroupStatus {
+  PENDING
+  CORRECTION_REQUIRED
+  ACTIVE
+  REJECTED
+  INACTIVE
+
+  @@map("group_status")
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+
+  @@map("day_of_week")
+}
+
+model Group {
+  id String @id @default(cuid())
+
+  name        String
+  description String
+  status      GroupStatus @default(PENDING)
+  minAge      Int?        @map("min_age")
+  maxAge      Int?        @map("max_age")
+  maxUsers    Int?        @map("max_users")
+
+  preferredCampus Campus       @relation(fields: [campusId], references: [id])
+  campusId        String       @map("campus_id")
+  ministry        Ministry?    @relation(fields: [ministryId], references: [id])
+  ministryId      String?      @map("ministry_id")
+  serviceTeam     ServiceTeam? @relation(fields: [serviceTeamId], references: [id])
+  serviceTeamId   String?      @map("service_team_id")
+
+  users            UserToSmallGroup[]
+  events           GroupEvent[]
+  tags             GroupToTag[]
+  timeSlots        GroupTimeSlot[]
+  curricularGroups CurricularGroup[]
+
+  @@map("groups")
+}
+
+model GroupTimeSlot {
+  id      String @id @default(cuid())
+  group   Group  @relation(fields: [groupId], references: [id])
+  groupId String @map("group_id")
+
+  dayOfWeek DayOfWeek @map("day_of_week")
+  startAt   DateTime  @map("start_at") @db.Timetz(3)
+  endAt     DateTime  @map("end_at") @db.Timetz(3)
+
+  @@map("group_time_slots")
+}
+
+model GroupEvent {
+  id String @id @default(cuid())
+
+  group   Group  @relation(fields: [groupId], references: [id])
+  groupId String @map("group_id")
+
+  startAt DateTime @map("start_at") @db.Timestamptz(3)
+  endAt   DateTime @map("end_at") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("group_events")
+}
+
+model GroupToTag {
+  group   Group  @relation(fields: [groupId], references: [id])
+  groupId String @map("group_id")
+  tag     Tag    @relation(fields: [tagId], references: [id])
+  tagId   String @map("tag_id")
+
+  @@id([groupId, tagId])
+  @@map("groups_to_tags")
+}
+
+model Tag {
+  id   String @id @default(cuid())
+  name String
+
+  groups GroupToTag[]
+
+  @@map("tags")
+}
+
+model CurricularGroup {
+  id    String @id @map("group_id")
+  group Group  @relation(fields: [id], references: [id])
+
+  // notas, archivos, videos, examen, asistencia
+
+  @@map("curricular_groups")
+}
+
+model Ministry {
+  id String @id @default(cuid())
+
+  // Central | Mujeres | Kids | Punto | Hombres ()
+  name   String
+  minAge Int?   @map("min_age")
+  maxAge Int?   @map("max_age")
+
+  users  UserToMinistry[]
+  groups Group[]
+
+  @@map("ministries")
+}
+
+model UserToMinistry {
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String   @map("user_id")
+  ministry   Ministry @relation(fields: [ministryId], references: [id])
+  ministryId String   @map("ministry_id")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@id([userId, ministryId])
+  @@map("users_to_ministries")
+}
+
+model ServiceTeam {
+  id String @id @default(cuid())
+
+  name String
+  // Alabanzas | Produccion | Atmosfera (equipos de servicio)
+
+  campus   Campus? @relation(fields: [campusId], references: [id])
+  campusId String? @map("campus_id")
+
+  users  UserToServiceTeam[]
+  groups Group[]
+
+  @@map("service_teams")
+}
+
+model UserToServiceTeam {
+  user   User        @relation(fields: [userId], references: [id])
+  userId String      @map("user_id")
+  team   ServiceTeam @relation(fields: [teamId], references: [id])
+  teamId String      @map("team_id")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@id([userId, teamId])
+  @@map("users_to_service_teams")
+}
