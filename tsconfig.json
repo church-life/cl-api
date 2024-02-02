@@ -18,6 +18,8 @@
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
 
+    "types": ["vitest/globals"],
+
     "rootDir": ".",
     "paths": {
       "@/*": ["src/*"],
