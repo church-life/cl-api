@@ -60,10 +60,10 @@ model User {
   preferredCampus   Campus? @relation(fields: [preferredCampusId], references: [id])
   preferredCampusId String? @map("preferred_campus_id")
 
-  groups       UserToSmallGroup[]
+  groups       UserToGroup[]
   ministries   UserToMinistry[]
   serviceTeams UserToServiceTeam[]
-  // UserToSmallGroup UserToSmallGroup[]
+  // UserToGroup UserToGroup[]
 
   @@map("users")
 }
@@ -76,20 +76,21 @@ enum UserRegisterStatus {
   @@map("user_register_status")
 }
 
-model UserToSmallGroup {
+model UserToGroup {
   user    User   @relation(fields: [userId], references: [id])
   userId  String @map("user_id")
   group   Group  @relation(fields: [groupId], references: [id])
   groupId String @map("group_id")
 
+  role      Role               @default(MEMBER)
   status    UserRegisterStatus @default(PENDING)
   createdAt DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
   // updatedById String?
-  // updatedBy   User?          @relation("UserToSmallGroupUpdatedBy", fields: [updatedById], references: [id])
+  // updatedBy   User?          @relation("UserToGroupUpdatedBy", fields: [updatedById], references: [id])
 
   @@id([userId, groupId])
-  @@map("users_to_small_groups")
+  @@map("users_to_groups")
 }
 
 enum GroupStatus {
@@ -131,7 +132,7 @@ model Group {
   serviceTeam     ServiceTeam? @relation(fields: [serviceTeamId], references: [id])
   serviceTeamId   String?      @map("service_team_id")
 
-  users            UserToSmallGroup[]
+  users            UserToGroup[]
   events           GroupEvent[]
   tags             GroupToTag[]
   timeSlots        GroupTimeSlot[]
@@ -215,6 +216,7 @@ model UserToMinistry {
   ministry   Ministry @relation(fields: [ministryId], references: [id])
   ministryId String   @map("ministry_id")
 
+  role      Role     @default(MEMBER)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
@@ -243,9 +245,17 @@ model UserToServiceTeam {
   team   ServiceTeam @relation(fields: [teamId], references: [id])
   teamId String      @map("team_id")
 
+  role      Role     @default(MEMBER)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@id([userId, teamId])
   @@map("users_to_service_teams")
+}
+
+enum Role {
+  LEADER
+  MEMBER
+
+  @@map("role")
 }
