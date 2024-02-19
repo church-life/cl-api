@@ -10,7 +10,7 @@ export class MinistriesService {
   constructor(private prisma: PrismaService) {}
 
   create(createMinistryDto: CreateMinistryDto) {
-    return 'This action adds a new ministry';
+    return this.prisma.ministry.create({ data: createMinistryDto });
   }
 
   findAll() {
@@ -22,10 +22,13 @@ export class MinistriesService {
   }
 
   update(id: string, updateMinistryDto: UpdateMinistryDto) {
-    return `This action updates a #${id} ministry`;
+    return this.prisma.ministry.update({
+      where: { id },
+      data: updateMinistryDto,
+    });
   }
 
   remove(id: string) {
-    return `This action removes a #${id} ministry`;
+    return this.prisma.ministry.delete({ where: { id } });
   }
 }
