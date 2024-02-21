@@ -8,6 +8,7 @@ import { AppService } from './app.service';
 import { AuthzModule } from './authz/authz.module';
 import { MinistriesModule } from './ministries/ministries.module';
 import { ServiceTeamsModule } from './service-teams/service-teams.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ServiceTeamsModule } from './service-teams/service-teams.module';
     ServiceTeamsModule,
     MinistriesModule,
     AuthzModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
