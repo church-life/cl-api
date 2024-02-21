@@ -1,10 +1,14 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { CreateMinistryDto } from './dto/create-ministry.dto';
 import { UpdateMinistryDto } from './dto/update-ministry.dto';
 import { MinistriesService } from './ministries.service';
 
+@ApiBearerAuth()
+@ApiTags('ministries')
+@UseGuards(AuthGuard('jwt'))
 @Controller('ministries')
 export class MinistriesController {
   constructor(private readonly ministriesService: MinistriesService) {}
@@ -14,7 +18,6 @@ export class MinistriesController {
     return this.ministriesService.create(createMinistryDto);
   }
 
-  @UseGuards(AuthGuard('jwt'))
   @Get()
   findAll() {
     return this.ministriesService.findAll();
