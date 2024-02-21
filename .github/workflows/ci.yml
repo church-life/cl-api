@@ -22,7 +22,7 @@ jobs:
         uses: ./tooling/gh-actions/setup
 
       - name: Check code format
-        run: pnpm nx check:format
+        run: pnpm check:format
 
   lint:
     runs-on: ubuntu-latest
