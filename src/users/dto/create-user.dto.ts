@@ -23,8 +23,10 @@ export class CreateUserDto implements Prisma.UserCreateInput {
   @ApiProperty({
     description: 'The birth date of the user',
     example: '1990-01-01',
+    type: String,
+    format: 'date',
   })
-  birthDate: string | Date;
+  birthDate: string;
 
   @ApiProperty({
     description: 'The email of the user',
@@ -36,6 +38,7 @@ export class CreateUserDto implements Prisma.UserCreateInput {
     description: 'The type of document',
     example: 'CC',
     enum: DocumentType,
+    enumName: 'DocumentType',
   })
   documentType: DocumentType;
 

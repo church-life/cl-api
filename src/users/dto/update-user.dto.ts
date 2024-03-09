@@ -25,8 +25,10 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   @ApiPropertyOptional({
     description: 'The birth date of the user',
     example: '1990-01-01',
+    type: String,
+    format: 'date',
   })
-  birthDate?: string | Date;
+  birthDate?: string;
 
   @ApiPropertyOptional({
     description: 'The email of the user',
@@ -38,6 +40,7 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
     description: 'The type of document',
     example: 'CC',
     enum: DocumentType,
+    enumName: 'DocumentType',
   })
   documentType?: DocumentType;
 
