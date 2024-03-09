@@ -6,6 +6,7 @@ import { validate } from '@/env';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthzModule } from './authz/authz.module';
+import { CountriesModule } from './countries/countries.module';
 import { MinistriesModule } from './ministries/ministries.module';
 import { ServiceTeamsModule } from './service-teams/service-teams.module';
 import { UsersModule } from './users/users.module';
@@ -17,6 +18,7 @@ import { UsersModule } from './users/users.module';
     MinistriesModule,
     AuthzModule,
     UsersModule,
+    CountriesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
