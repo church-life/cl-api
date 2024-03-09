@@ -7,7 +7,9 @@ import { TypedConfigService } from '@/env';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter(), {
+    cors: true,
+  });
   const configService = app.get(TypedConfigService);
 
   const config = new DocumentBuilder()
