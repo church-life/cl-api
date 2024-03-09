@@ -1,7 +1,9 @@
-import clerkClient from '@clerk/clerk-sdk-node';
-import { Injectable } from '@nestjs/common';
+import { clerkClient } from '@clerk/clerk-sdk-node';
+import { isClerkAPIResponseError } from '@clerk/shared/error';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 
 import { PrismaService } from '@/db/prisma.service';
+import { aw } from '@/utils/aw';
 
 import { type CreateUserDto } from './dto/create-user.dto';
 import { type UpdateUserDto } from './dto/update-user.dto';
@@ -19,37 +21,81 @@ export class UsersService {
   }
 
   async create(createUserDto: CreateUserDto) {
-    const userAlreadyExists = await this.prismaService.user.findUnique({
-      where: { email: createUserDto.email },
+    const emailAlreadyExists = await this.prismaService.emailAddress.findUnique({
+      where: { emailAddress: createUserDto.email },
+      select: { primaryEmailUser: true },
     });
 
-    if (userAlreadyExists) {
-      return userAlreadyExists;
+    if (emailAlreadyExists) {
+      return emailAlreadyExists.primaryEmailUser;
     }
 
-    const createdClerkUser = await clerkClient.users.createUser({
-      emailAddress: [createUserDto.email],
-      firstName: createUserDto.names,
-      lastName: createUserDto.lastNames,
-      phoneNumber: [createUserDto.phone],
-      password: createUserDto.password,
+    const [createdClerkUser, createdClerkUserErr] = await aw(
+      clerkClient.users.createUser({
+        emailAddress: [createUserDto.email],
+        firstName: createUserDto.names,
+        lastName: createUserDto.lastNames,
+        phoneNumber: [createUserDto.phone],
+        password: createUserDto.password,
+      }),
+    );
+
+    if (createdClerkUserErr) {
+      if (isClerkAPIResponseError(createdClerkUserErr)) {
+        throw new HttpException(
+          createdClerkUserErr.errors[0].longMessage || createdClerkUserErr.errors[0].message,
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          {
+            cause: createdClerkUserErr,
+          },
+        );
+      }
+
+      throw new HttpException('Error creating user in Clerk', HttpStatus.INTERNAL_SERVER_ERROR, {
+        cause: createdClerkUserErr,
+      });
+    }
+
+    // createdClerkUser.emailAddresses[0].
+
+    const txOut = await this.prismaService.$transaction(async (tx) => {
+      const createdUser = await tx.user.create({
+        data: {
+          externalId: createdClerkUser.id,
+          displayName: createUserDto.displayName,
+          names: createUserDto.names,
+          lastNames: createUserDto.lastNames,
+          documentType: createUserDto.documentType,
+          documentId: createUserDto.documentId,
+          birthDate: createUserDto.birthDate,
+        },
+      });
+
+      const eId = await tx.emailAddress.create({
+        data: {
+          emailAddress: createUserDto.email,
+          userId: createdUser.id,
+        },
+      });
+      const pId = await tx.phoneNumber.create({
+        data: {
+          phoneNumber: createUserDto.phone,
+          userId: createdUser.id,
+        },
+      });
+
+      const updatedUser = await tx.user.update({
+        where: { id: createdUser.id },
+        data: {
+          primaryEmailAddressId: eId.id,
+          primaryPhoneNumberId: pId.id,
+        },
+      });
+
+      return updatedUser;
     });
 
-    const createdUser = await this.prismaService.user.create({
-      data: {
-        externalId: createdClerkUser.id,
-        displayName: createUserDto.displayName,
-        names: createUserDto.names,
-        lastNames: createUserDto.lastNames,
-        email: createUserDto.email,
-        phone: createUserDto.phone,
-        documentType: createUserDto.documentType,
-        documentId: createUserDto.documentId,
-        birthDate: createUserDto.birthDate,
-      },
-    });
-
-    return createdUser;
+    return txOut;
   }
 
   // TODO: Optimize this method
@@ -62,13 +108,13 @@ export class UsersService {
       await this.changePassword(user, password);
     }
 
-    if (email) {
-      await this.changeEmail(user, email);
-    }
+    // if (email) {
+    //   await this.changeEmail(user, email);
+    // }
 
-    if (phone) {
-      await this.changePhone(user, phone);
-    }
+    // if (phone) {
+    //   await this.changePhone(user, phone);
+    // }
 
     return this.prismaService.user.update({
       where: { id },
@@ -99,75 +145,75 @@ export class UsersService {
     await clerkClient.users.updateUser(user.externalId, { password });
   }
 
-  private async changeEmail(
-    user: Awaited<ReturnType<typeof UsersService.prototype.getValidatedUser>>,
-    newEmail: string,
-  ) {
-    const usersWithSameEmail = await this.prismaService.user.findMany({
-      where: { email: newEmail },
-    });
+  // private async changeEmail(
+  //   user: Awaited<ReturnType<typeof UsersService.prototype.getValidatedUser>>,
+  //   newEmail: string,
+  // ) {
+  //   const usersWithSameEmail = await this.prismaService.emailAddress.findMany({
+  //     where: { emailAddress: newEmail },
+  //   });
 
-    if (usersWithSameEmail.length > 0) {
-      throw new Error('Email already in use');
-    }
+  //   if (usersWithSameEmail.length > 0) {
+  //     throw new Error('Email already in use');
+  //   }
 
-    const newEmailInClerk = await clerkClient.emailAddresses.createEmailAddress({
-      userId: user.externalId,
-      emailAddress: newEmail,
-      verified: true,
-    });
+  //   const newEmailInClerk = await clerkClient.emailAddresses.createEmailAddress({
+  //     userId: user.externalId,
+  //     emailAddress: newEmail,
+  //     verified: true,
+  //   });
 
-    if (!newEmailInClerk) {
-      throw new Error('Error creating email in Clerk');
-    }
+  //   if (!newEmailInClerk) {
+  //     throw new Error('Error creating email in Clerk');
+  //   }
 
-    //remove old email from clerk
-    const clerkUser = await clerkClient.users.getUser(user.externalId);
+  //   //remove old email from clerk
+  //   const clerkUser = await clerkClient.users.getUser(user.externalId);
 
-    if (clerkUser.primaryEmailAddressId) {
-      await clerkClient.emailAddresses.deleteEmailAddress(clerkUser.primaryEmailAddressId);
-    }
+  //   if (clerkUser.primaryEmailAddressId) {
+  //     await clerkClient.emailAddresses.deleteEmailAddress(clerkUser.primaryEmailAddressId);
+  //   }
 
-    await this.prismaService.user.update({
-      where: { id: user.id },
-      data: { email: newEmail },
-    });
-  }
+  //   await this.prismaService.user.update({
+  //     where: { id: user.id },
+  //     data: { email: newEmail },
+  //   });
+  // }
 
-  private async changePhone(
-    user: Awaited<ReturnType<typeof UsersService.prototype.getValidatedUser>>,
-    newPhone: string,
-  ) {
-    const usersWithSamePhone = await this.prismaService.user.findMany({
-      where: { phone: newPhone },
-    });
+  // private async changePhone(
+  //   user: Awaited<ReturnType<typeof UsersService.prototype.getValidatedUser>>,
+  //   newPhone: string,
+  // ) {
+  //   const usersWithSamePhone = await this.prismaService.phoneNumber.findMany({
+  //     where: { phoneNumber: newPhone },
+  //   });
 
-    if (usersWithSamePhone.length > 0) {
-      throw new Error('Phone already in use');
-    }
+  //   if (usersWithSamePhone.length > 0) {
+  //     throw new Error('Phone already in use');
+  //   }
 
-    const newPhoneInClerk = await clerkClient.phoneNumbers.createPhoneNumber({
-      userId: user.externalId,
-      phoneNumber: newPhone,
-      verified: true,
-    });
+  //   const newPhoneInClerk = await clerkClient.phoneNumbers.createPhoneNumber({
+  //     userId: user.externalId,
+  //     phoneNumber: newPhone,
+  //     verified: true,
+  //   });
 
-    if (!newPhoneInClerk) {
-      throw new Error('Error creating phone in Clerk');
-    }
+  //   if (!newPhoneInClerk) {
+  //     throw new Error('Error creating phone in Clerk');
+  //   }
 
-    //remove old phone from clerk
-    const clerkUser = await clerkClient.users.getUser(user.externalId);
+  //   //remove old phone from clerk
+  //   const clerkUser = await clerkClient.users.getUser(user.externalId);
 
-    if (clerkUser.primaryPhoneNumberId) {
-      await clerkClient.phoneNumbers.deletePhoneNumber(clerkUser.primaryPhoneNumberId);
-    }
+  //   if (clerkUser.primaryPhoneNumberId) {
+  //     await clerkClient.phoneNumbers.deletePhoneNumber(clerkUser.primaryPhoneNumberId);
+  //   }
 
-    await this.prismaService.user.update({
-      where: { id: user.id },
-      data: { phone: newPhone },
-    });
-  }
+  //   await this.prismaService.user.update({
+  //     where: { id: user.id },
+  //     data: { phone: newPhone },
+  //   });
+  // }
 
   private async getValidatedUser(id: string) {
     const user = await this.prismaService.user.findUnique({ where: { id } });
