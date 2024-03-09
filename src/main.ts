@@ -7,9 +7,11 @@ import { TypedConfigService } from '@/env';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter(), {
-    cors: true,
-  });
+  const app = await NestFactory.create<NestFastifyApplication>(
+    AppModule,
+    new FastifyAdapter({ logger: true }),
+    { cors: true },
+  );
   const configService = app.get(TypedConfigService);
 
   const config = new DocumentBuilder()
@@ -23,7 +25,9 @@ async function bootstrap() {
 
   const port = configService.get('PORT', { infer: true });
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0', () => {
+    console.log(`Server running on port ${port}`);
+  });
 }
 
 void bootstrap();
