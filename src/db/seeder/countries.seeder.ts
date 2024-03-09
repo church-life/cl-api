@@ -6,24 +6,9 @@ type Payload = Prisma.CountryCreateInput;
 
 export class CountriesSeeder extends Seeder<Payload> {
   protected readonly data = [
-    {
-      name: 'Peru',
-      alpha2: 'PE',
-      alpha3: 'PER',
-      dialCode: 51,
-    },
-    {
-      name: 'United States',
-      alpha2: 'US',
-      alpha3: 'USA',
-      dialCode: 1,
-    },
-    {
-      name: 'Spain',
-      alpha2: 'ES',
-      alpha3: 'ESP',
-      dialCode: 34,
-    },
+    { name: 'Peru', alpha2: 'PE', alpha3: 'PER', dialCode: 51 },
+    { name: 'United States', alpha2: 'US', alpha3: 'USA', dialCode: 1 },
+    { name: 'Spain', alpha2: 'ES', alpha3: 'ESP', dialCode: 34 },
   ] satisfies Payload[];
 
   protected async seedLogic(country: Payload) {
