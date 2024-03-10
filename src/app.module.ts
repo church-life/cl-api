@@ -10,6 +10,7 @@ import { CountriesModule } from './countries/countries.module';
 import { MinistriesModule } from './ministries/ministries.module';
 import { ServiceTeamsModule } from './service-teams/service-teams.module';
 import { UsersModule } from './users/users.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { UsersModule } from './users/users.module';
     AuthzModule,
     UsersModule,
     CountriesModule,
+    WebhooksModule,
   ],
   controllers: [AppController],
   providers: [AppService],

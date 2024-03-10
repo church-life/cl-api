@@ -6,6 +6,7 @@ const envSchema = z.object({
   PORT: z.number().optional().default(3000),
   AUTH_ISSUER_URL: z.string().url(),
   CLERK_SECRET_KEY: z.string(),
+  CLERK_WEBHOOK_SECRET: z.string(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

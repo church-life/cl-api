@@ -5,6 +5,7 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from '@/db/prisma.service';
 import { aw } from '@/utils/aw';
 
+import { type CreateUserExternalDto } from './dto/create-user-external.dto';
 import { type CreateUserDto } from './dto/create-user.dto';
 import { type UpdateUserDto } from './dto/update-user.dto';
 
@@ -18,6 +19,36 @@ export class UsersService {
 
   findOne(id: string) {
     return this.prismaService.user.findUnique({ where: { id } });
+  }
+
+  async createFromWebhook(createUserExternalDto: CreateUserExternalDto) {
+    const txOut = await this.prismaService.$transaction(async (tx) => {
+      const createdUser = await tx.user.create({
+        data: {
+          externalId: createUserExternalDto.externalId,
+          names: createUserExternalDto.names,
+          lastNames: createUserExternalDto.lastNames,
+        },
+      });
+
+      const eId = await tx.emailAddress.create({
+        data: {
+          emailAddress: createUserExternalDto.email,
+          userId: createdUser.id,
+        },
+      });
+
+      const updatedUser = await tx.user.update({
+        where: { id: createdUser.id },
+        data: {
+          primaryEmailAddressId: eId.id,
+        },
+      });
+
+      return updatedUser;
+    });
+
+    return txOut;
   }
 
   async create(createUserDto: CreateUserDto) {
@@ -55,8 +86,6 @@ export class UsersService {
         cause: createdClerkUserErr,
       });
     }
-
-    // createdClerkUser.emailAddresses[0].
 
     const txOut = await this.prismaService.$transaction(async (tx) => {
       const createdUser = await tx.user.create({

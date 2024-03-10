@@ -9,6 +9,11 @@ export class CreateUserDto implements Prisma.UserCreateInput {
   displayName: string;
 
   @ApiProperty({
+    description: "Clerk's external id",
+  })
+  externalId: string;
+
+  @ApiProperty({
     description: 'The names of the user',
     example: 'Test',
   })
