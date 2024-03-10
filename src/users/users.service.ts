@@ -167,6 +167,21 @@ export class UsersService {
     return d;
   }
 
+  async removeFromWebhook(externalId?: string) {
+    if (!externalId) {
+      throw new Error('User externalId not found from webhook');
+    }
+    const user = await this.prismaService.user.findUnique({ where: { externalId } });
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const d = await this.prismaService.user.delete({ where: { externalId } });
+
+    console.log('User deleted from Prisma');
+    return d;
+  }
+
   private async changePassword(
     user: Awaited<ReturnType<typeof UsersService.prototype.getValidatedUser>>,
     password: string,

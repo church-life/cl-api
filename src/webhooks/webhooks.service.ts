@@ -19,27 +19,31 @@ export class WebhooksService {
   async handleClerkWebhook(headers: Headers, payload: ClerkPayload) {
     const evt = this.getClerkWebhookEvent(headers, payload);
 
-    if (evt.type !== 'user.created') {
-      // not supported
-      throw new HttpException(`Webhook type "${evt.type}" not supported`, 400);
+    if (evt.type === 'user.created') {
+      const userEmail = evt.data.email_addresses.find(
+        (e) => e.id === evt.data.primary_email_address_id,
+      )?.email_address;
+
+      if (!userEmail) {
+        throw new HttpException('User email not found from webhook', 400);
+      }
+      const newUser = await this.usersService.createFromWebhook({
+        email: userEmail,
+        externalId: evt.data.id,
+        names: evt.data.first_name,
+        lastNames: evt.data.last_name,
+      });
+
+      return newUser;
     }
 
-    const userEmail = evt.data.email_addresses.find(
-      (e) => e.id === evt.data.primary_email_address_id,
-    )?.email_address;
+    if (evt.type === 'user.deleted') {
+      const updatedUser = await this.usersService.removeFromWebhook(evt.data.id);
 
-    if (!userEmail) {
-      throw new HttpException('User email not found from webhook', 400);
+      return updatedUser;
     }
 
-    const newUser = await this.usersService.createFromWebhook({
-      email: userEmail,
-      externalId: evt.data.id,
-      names: evt.data.first_name,
-      lastNames: evt.data.last_name,
-    });
-
-    return newUser;
+    throw new HttpException(`Webhook type "${evt.type}" not supported`, 400);
   }
 
   private getClerkWebhookEvent(headers: Headers, payload: ClerkPayload) {
