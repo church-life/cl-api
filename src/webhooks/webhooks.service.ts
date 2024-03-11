@@ -13,7 +13,7 @@ export type ClerkPayload = Record<string, unknown>;
 export class WebhooksService {
   constructor(
     private readonly usersService: UsersService,
-    private readonly configService: ConfigService<EnvConfig>,
+    private readonly configService: ConfigService<EnvConfig, true>,
   ) {}
 
   async handleClerkWebhook(headers: Headers, payload: ClerkPayload) {
@@ -48,10 +48,6 @@ export class WebhooksService {
 
   private getClerkWebhookEvent(headers: Headers, payload: ClerkPayload) {
     const CLERK_WEBHOOK_SECRET = this.configService.get('CLERK_WEBHOOK_SECRET', { infer: true });
-
-    if (!CLERK_WEBHOOK_SECRET) {
-      throw new Error('Please add CLERK_WEBHOOK_SECRET from Clerk Dashboard to .env');
-    }
 
     const svixHeaders = this.parseSvixHeaders(headers);
 

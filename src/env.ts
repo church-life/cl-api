@@ -12,8 +12,12 @@ const envSchema = z.object({
 export type EnvConfig = z.infer<typeof envSchema>;
 
 export function validate(config: Record<string, unknown>) {
-  const validatedConfig = envSchema.parse(config);
-  return validatedConfig;
+  const parsed = envSchema.safeParse(config);
+  if (parsed.success === false) {
+    console.error('❌ Invalid environment variables:', parsed.error.flatten().fieldErrors);
+    throw new Error('Invalid environment variables');
+  }
+  return parsed.data;
 }
 
 export const TypedConfigService = ConfigService<EnvConfig, true>;
